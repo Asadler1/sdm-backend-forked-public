@@ -302,14 +302,10 @@ def _internal_sdm(with_tt=False, force_json=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='OTA NFC Server')
-    parser.add_argument('--host', type=str, nargs='?', default='0.0.0.0', help='address to listen on')
-    parser.add_argument('--port', type=int, nargs='?', default=5000, help='port to listen on')
+    parser.add_argument('--host', type=str, nargs='?', help='address to listen on')
+    parser.add_argument('--port', type=int, nargs='?', help='port to listen on')
 
     args = parser.parse_args()
 
-    app.run(host=args.host, port=args.port)
+app.run(host='0.0.0.0', port=args.port)
 
-
-    args = parser.parse_args()
-
-    app.run(host=args.host, port=args.port)
