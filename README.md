@@ -30,8 +30,8 @@ Feel free to reach me at hello@nfcdeveloper.com if you have any questions concer
 2. Setup the virtualenv
    ```
    apt install -y python3 python3-pip python3-venv
-   python3 -m venv venv
-   source venv/bin/activate
+   python3 -m venv fork
+   source fork/bin/activate
    ```
 3. Install the required dependencies and copy example config:
    ```
