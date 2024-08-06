@@ -24,7 +24,7 @@ Feel free to reach me at hello@nfcdeveloper.com if you have any questions concer
 1. Clone the repository
    ```
    apt install -y git
-   git clone https://github.com/nfc-developer/sdm-backend.git
+   git clone https://github.com/Asadler1/sdm-backend-forked-public.git
    cd sdm-backend
    ```
 2. Setup the virtualenv
