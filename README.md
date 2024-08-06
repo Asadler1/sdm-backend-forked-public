@@ -40,9 +40,7 @@ Feel free to reach me at hello@nfcdeveloper.com if you have any questions concer
    ```
 4. Run Flask development server:
    ```
-   python3 app.py --host 0.0.0.0 --port 5000
-   ```
-5. Visit [localhost:5000](http://127.0.0.1:5000/) and check out the examples.
+   python3 app.py --host 0.0.0.0 --port 5111
 
 ### Using Docker
 1. Launch sdm-backend on port 5000:
