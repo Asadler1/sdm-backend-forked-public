@@ -41,20 +41,7 @@ Feel free to reach me at hello@nfcdeveloper.com if you have any questions concer
 4. Run Flask development server:
    ```
    python3 app.py --host 0.0.0.0 --port 5111
-
-### Using Docker
-1. Launch sdm-backend on port 5000:
    ```
-   # ensure to delete old version, if it exists
-   docker rmi icedevml/sdm-backend:latest || true
-
-   # run sdm-backend
-   docker run \
-       -p 5000:80 \
-       -e MASTER_KEY=00000000000000000000000000000000 \
-       icedevml/sdm-backend:latest
-   ```
-2. Visit [localhost:5000](http://127.0.0.1:5000/) and check out the examples.
 
 Note: If you are running production instance, the `MASTER_KEY` should be an unique 16 byte value (hex encoded). However, all-zeros key is perfectly fine for testing.
 
