@@ -27,9 +27,9 @@
     </p>
     <p><a href="/api{{ request.full_path }}" class="btn btn-outline-secondary">View as JSON</a></p>
     
-    <!-- Add your button here -->
+    <!-- Button with JavaScript to trigger POST request -->
     <p>
-        <button type="button" class="btn btn-primary">Click Me</button>
+        <button type="button" class="btn btn-primary" id="clickMeButton">Click Me</button>
     </p>
     
     {% if demo_mode %}
@@ -38,4 +38,24 @@
         <a href="/">Back to the main page</a>
     </p>
     {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById("clickMeButton").addEventListener("click", function() {
+        fetch('/update_click_count', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            alert('Click count updated!');
+            // Optionally update the UI to show that the count was updated
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error updating the click count.');
+        });
+    });
+</script>
 {% endblock %}
