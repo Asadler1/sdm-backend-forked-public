@@ -3,7 +3,7 @@
 {% block content %}
     <h1>Secure Dynamic Messaging Backend Server Demo</h1>
     <p>
-        <strong style="color: green;">Cryptographic signature validated EXP.</strong>
+        <strong style="color: green;">Cryptographic signature validated BROTHER.</strong>
     </p>
     <p>
         {% if encryption_mode == "LRP" %}
@@ -25,11 +25,19 @@
             {% endif %}
         {% endif %}
     </p>
+    
+    <!-- Add form for user input -->
+    <h2>Enter a Number</h2>
+    <form method="POST" action="/submit_number">
+        <input type="number" name="number" required>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+
     <p><a href="/api{{ request.full_path }}" class="btn btn-outline-secondary">View as JSON</a></p>
     
     <!-- Button with JavaScript to trigger POST request -->
     <p>
-        <button type="button" class="btn btn-primary" id="clickMeButton">Click Me EXP</button>
+        <button type="button" class="btn btn-primary" id="clickMeButton">Click Meeee NOW</button>
     </p>
     
     {% if demo_mode %}
