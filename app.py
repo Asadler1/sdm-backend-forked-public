@@ -1,7 +1,10 @@
+# pylint: disable=unused-import
+
 import argparse
 import binascii
 import io
 import mysql.connector
+
 from flask import Flask, jsonify, render_template, request, redirect, url_for
 from werkzeug.exceptions import BadRequest
 
@@ -58,33 +61,7 @@ def sdm_main():
     """
     return render_template('sdm_main.html')
 
-@app.route('/submit_number', methods=['POST'])
-def submit_number():
-    number = request.form.get('number')
-    if number:
-        save_number_to_db(number)
-        return redirect(url_for('sdm_main'))
-    else:
-        return "No number provided", 400
-
-def save_number_to_db(number):
-    db_config = {
-        'user': 'anthony',
-        'password': 'Ccuh1234567!',
-        'host': 'localhost',
-        'database': 'FlaskTest'
-    }
-    
-    try:
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-        cursor.execute("INSERT INTO your_table (number) VALUES (%s)", (number,))
-        connection.commit()
-    finally:
-        cursor.close()
-        connection.close()
-
-# pylint:  disable=too-many-branches
+# pylint: disable=too-many-branches
 def parse_parameters():
     arg_e = request.args.get('e')
     if arg_e:
@@ -188,3 +165,161 @@ def _internal_tagpt(force_json=False):
             "read_ctr": res['read_ctr'],
             "enc_mode": res['encryption_mode'].name
         })
+
+    return render_template('sdm_info.html',
+                           encryption_mode=res['encryption_mode'].name,
+                           uid=res['uid'],
+                           read_ctr_num=res['read_ctr'])
+
+@app.route('/webnfc')
+def sdm_webnfc():
+    return render_template('sdm_webnfc.html')
+
+@app.route('/tagtt')
+def sdm_info_tt():
+    return _internal_sdm(with_tt=True)
+
+@app.route('/api/tagtt')
+def sdm_api_info_tt():
+    try:
+        return _internal_sdm(with_tt=True, force_json=True)
+    except BadRequest as err:
+        return jsonify({"error": str(err)})
+
+@app.route('/tag')
+def sdm_info():
+    return _internal_sdm(with_tt=False)
+
+@app.route('/api/tag')
+def sdm_api_info():
+    try:
+        return _internal_sdm(with_tt=False, force_json=True)
+    except BadRequest as err:
+        return jsonify({"error": str(err)})
+
+# New route for handling number submission
+@app.route('/submit_number', methods=['POST'])
+def submit_number():
+    number = request.form.get('number')
+    if number:
+        save_number_to_db(number)
+        return redirect(url_for('sdm_main'))  # Redirect back to the main page after submission
+    else:
+        return "No number provided", 400
+
+def save_number_to_db(number):
+    # Connect to the database and insert the number
+    # Replace with your actual database configuration
+    db_config = {
+        'user': 'anthony',
+        'password': 'Ccuh1234567!',
+        'host': 'localhost',
+        'database': 'FlaskTest'
+    }
+    
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO your_table (number) VALUES (%s)", (number,))
+        connection.commit()
+    finally:
+        cursor.close()
+        connection.close()
+
+# pylint: disable=too-many-branches, too-many-statements, too-many-locals
+def _internal_sdm(with_tt=False, force_json=False):
+    """
+    SUN decrypting/validating endpoint.
+    """
+    param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b = parse_parameters()
+
+    try:
+        res = decrypt_sun_message(param_mode=param_mode,
+                                  sdm_meta_read_key=derive_undiversified_key(MASTER_KEY, 1),
+                                  sdm_file_read_key=lambda uid: derive_tag_key(MASTER_KEY, uid, 2),
+                                  picc_enc_data=enc_picc_data_b,
+                                  sdmmac=sdmmac_b,
+                                  enc_file_data=enc_file_data_b)
+    except InvalidMessage:
+        raise BadRequest("Invalid message (most probably wrong signature).") from InvalidMessage
+
+    if REQUIRE_LRP and res['encryption_mode'] != EncMode.LRP:
+        raise BadRequest("Invalid encryption mode, expected LRP.")
+
+    picc_data_tag = res['picc_data_tag']
+    uid = res['uid']
+    read_ctr_num = res['read_ctr']
+    file_data = res['file_data']
+    encryption_mode = res['encryption_mode'].name
+
+    file_data_utf8 = ""
+    tt_status_api = ""
+    tt_status = ""
+    tt_color = ""
+
+    if res['file_data']:
+        if param_mode == ParamMode.BULK:
+            file_data_len = file_data[2]
+            file_data_unpacked = file_data[3:3 + file_data_len]
+        else:
+            file_data_unpacked = file_data
+
+        file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
+
+        if with_tt:
+            tt_perm_status = file_data[0:1].decode('ascii', 'replace')
+            tt_cur_status = file_data[1:2].decode('ascii', 'replace')
+
+            if tt_perm_status == 'C' and tt_cur_status == 'C':
+                tt_status_api = 'secure'
+                tt_status = 'OK (not tampered)'
+                tt_color = 'green'
+            elif tt_perm_status == 'O' and tt_cur_status == 'C':
+                tt_status_api = 'tampered_closed'
+                tt_status = 'Tampered! (loop closed)'
+                tt_color = 'red'
+            elif tt_perm_status == 'O' and tt_cur_status == 'O':
+                tt_status_api = 'tampered_open'
+                tt_status = 'Tampered! (loop open)'
+                tt_color = 'red'
+            elif tt_perm_status == 'I' and tt_cur_status == 'I':
+                tt_status_api = 'not_initialized'
+                tt_status = 'Not initialized'
+                tt_color = 'orange'
+            elif tt_perm_status == 'N' and tt_cur_status == 'T':
+                tt_status_api = 'not_supported'
+                tt_status = 'Not supported by the tag'
+                tt_color = 'orange'
+            else:
+                tt_status_api = 'unknown'
+                tt_status = 'Unknown'
+                tt_color = 'orange'
+
+    if request.args.get("output") == "json" or force_json:
+        return jsonify({
+            "uid": uid.hex().upper(),
+            "file_data": file_data.hex() if file_data else None,
+            "read_ctr": read_ctr_num,
+            "tt_status": tt_status_api,
+            "enc_mode": encryption_mode
+        })
+
+    return render_template('sdm_info.html',
+                           encryption_mode=encryption_mode,
+                           picc_data_tag=picc_data_tag,
+                           uid=uid,
+                           read_ctr_num=read_ctr_num,
+                           file_data=file_data,
+                           file_data_utf8=file_data_utf8,
+                           tt_status=tt_status,
+                           tt_color=tt_color)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='OTA NFC Server')
+    parser.add_argument('--host', type=str, nargs='?', default='0.0.0.0', help='address to listen on')
+    parser.add_argument('--port', type=int, nargs='?', default=5111, help='port to listen on')
+
+    args = parser.parse_args()
+
+    app.run(host='0.0.0.0', port=5111)
+
