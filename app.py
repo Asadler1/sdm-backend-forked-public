@@ -220,7 +220,7 @@ def save_number_to_db(number):
     try:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO your_table (number) VALUES (%s)", (number,))
+        cursor.execute("INSERT INTO user_inputs (number) VALUES (%s)", (number,))
         connection.commit()
     finally:
         cursor.close()
