@@ -1,10 +1,12 @@
+
 # pylint: disable=unused-import
 
 import argparse
 import binascii
 import io
+import mysql.connector
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, redirect, url_for
 from werkzeug.exceptions import BadRequest
 
 from config import (
@@ -36,27 +38,22 @@ from libsdm.sdm import (
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-
 @app.errorhandler(400)
 def handler_bad_request(err):
     return render_template('error.html', code=400, msg=str(err)), 400
-
 
 @app.errorhandler(403)
 def handler_forbidden(err):
     return render_template('error.html', code=403, msg=str(err)), 403
 
-
 @app.errorhandler(404)
 def handler_not_found(err):
     return render_template('error.html', code=404, msg=str(err)), 404
-
 
 @app.context_processor
 def inject_demo_mode():
     demo_mode = MASTER_KEY == (b"\x00" * 16)
     return {"demo_mode": demo_mode}
-
 
 @app.route('/')
 def sdm_main():
@@ -65,8 +62,7 @@ def sdm_main():
     """
     return render_template('sdm_main.html')
 
-
-# pylint:  disable=too-many-branches
+# pylint: disable=too-many-branches
 def parse_parameters():
     arg_e = request.args.get('e')
     if arg_e:
@@ -127,14 +123,12 @@ def parse_parameters():
 
     return param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b
 
-
 @app.route('/tagpt')
 def sdm_info_plain():
     """
     Return HTML
     """
     return _internal_tagpt()
-
 
 @app.route('/api/tagpt')
 def sdm_api_info_plain():
@@ -145,7 +139,6 @@ def sdm_api_info_plain():
         return _internal_tagpt(force_json=True)
     except BadRequest as err:
         return jsonify({"error": str(err)}), 400
-
 
 def _internal_tagpt(force_json=False):
     try:
@@ -179,16 +172,13 @@ def _internal_tagpt(force_json=False):
                            uid=res['uid'],
                            read_ctr_num=res['read_ctr'])
 
-
 @app.route('/webnfc')
 def sdm_webnfc():
     return render_template('sdm_webnfc.html')
 
-
 @app.route('/tagtt')
 def sdm_info_tt():
     return _internal_sdm(with_tt=True)
-
 
 @app.route('/api/tagtt')
 def sdm_api_info_tt():
@@ -197,11 +187,9 @@ def sdm_api_info_tt():
     except BadRequest as err:
         return jsonify({"error": str(err)})
 
-
 @app.route('/tag')
 def sdm_info():
     return _internal_sdm(with_tt=False)
-
 
 @app.route('/api/tag')
 def sdm_api_info():
@@ -210,8 +198,36 @@ def sdm_api_info():
     except BadRequest as err:
         return jsonify({"error": str(err)})
 
+# New route for handling number submission
+@app.route('/submit_number', methods=['POST'])
+def submit_number():
+    number = request.form.get('number')
+    if number:
+        save_number_to_db(number)
+        return redirect(url_for('sdm_main'))  # Redirect back to the main page after submission
+    else:
+        return "No number provided", 400
 
-# pylint:  disable=too-many-branches, too-many-statements, too-many-locals
+def save_number_to_db(number):
+    # Connect to the database and insert the number
+    # Replace with your actual database configuration
+    db_config = {
+        'user': 'anthony',
+        'password': 'Ccuh1234567!',
+        'host': 'localhost',
+        'database': 'FlaskTest'
+    }
+    
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO test (number) VALUES (%s)", (number,))
+        connection.commit()
+    finally:
+        cursor.close()
+        connection.close()
+
+# pylint: disable=too-many-branches, too-many-statements, too-many-locals
 def _internal_sdm(with_tt=False, force_json=False):
     """
     SUN decrypting/validating endpoint.
@@ -299,13 +315,11 @@ def _internal_sdm(with_tt=False, force_json=False):
                            tt_status=tt_status,
                            tt_color=tt_color)
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='OTA NFC Server')
-    parser.add_argument('--host', type=str, nargs='?', help='address to listen on')
-    parser.add_argument('--port', type=int, nargs='?', help='port to listen on')
+    parser.add_argument('--host', type=str, nargs='?', default='0.0.0.0', help='address to listen on')
+    parser.add_argument('--port', type=int, nargs='?', default=5111, help='port to listen on')
 
     args = parser.parse_args()
 
-app.run(host='0.0.0.0', port=5111)
-
+    app.run(host='0.0.0.0', port=5111)
