@@ -25,6 +25,14 @@
             {% endif %}
         {% endif %}
     </p>
+    
+    <!-- Add form for user input -->
+    <h2>Enter a Number</h2>
+    <form method="POST" action="/submit_number">
+        <input type="number" name="number" required>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+
     <p><a href="/api{{ request.full_path }}" class="btn btn-outline-secondary">View as JSON</a></p>
     
     <!-- Button with JavaScript to trigger POST request -->
